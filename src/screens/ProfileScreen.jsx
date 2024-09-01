@@ -3,7 +3,7 @@ import Profile from "../components/Profile";
 
 const ProfileScreen = () => {
 	return (
-		<div className="container mx-auto p-6">
+		<div className="  mx-auto p-6">
 			<Profile />
 		</div>
 	);

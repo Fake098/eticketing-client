@@ -6,11 +6,9 @@
 	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 	line-height: 1.5;
 	font-weight: 400;
-
 	color-scheme: light dark;
 	color: rgba(255, 255, 255, 0.87);
 	background-color: #242424;
-
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
@@ -20,7 +18,7 @@
 a {
 	font-weight: 500;
 	color: #646cff;
-	text-decoration: inherit;
+	text-decoration: none; /* Changed from inherit to none for consistent styling */
 }
 a:hover {
 	color: #535bf2;
@@ -28,8 +26,20 @@ a:hover {
 
 body {
 	margin: 0;
+	padding: 0; /* Added padding reset for better control */
 	display: flex;
-	place-items: center;
+	flex-direction: column; /* Changed to column to ensure full-height layout */
+	width: 100vw;
+	height: 100vh;
+	overflow-x: hidden;
+	background-color: var(
+		--background-color,
+		#242424
+	); /* Use CSS variable for easy theming */
+	color: var(
+		--text-color,
+		rgba(255, 255, 255, 0.87)
+	); /* Use CSS variable for easy theming */
 }
 
 h1 {
@@ -45,11 +55,13 @@ button {
 	font-weight: 500;
 	font-family: inherit;
 	background-color: #1a1a1a;
+	color: #fff; /* Added color to ensure text is visible */
 	cursor: pointer;
-	transition: border-color 0.25s;
+	transition: border-color 0.25s, background-color 0.25s; /* Added background-color transition */
 }
 button:hover {
 	border-color: #646cff;
+	background-color: #333; /* Added hover background color */
 }
 button:focus,
 button:focus-visible {
@@ -58,13 +70,22 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
 	:root {
-		color: #213547;
-		background-color: #ffffff;
+		--text-color: #213547;
+		--background-color: #ffffff;
 	}
 	a:hover {
 		color: #747bff;
 	}
 	button {
 		background-color: #f9f9f9;
+		color: #333; /* Added color for text */
 	}
+}
+
+.custom-grid {
+	display: grid;
+	grid-template-columns: repeat(20, minmax(0, 1fr));
+	gap: 0.5rem;
+	overflow-x: auto; /* Allow horizontal scrolling */
+	width: max-content; /* Ensure the grid takes up the required width without shrinking */
 }

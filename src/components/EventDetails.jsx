@@ -1,22 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../api/api";
+import { toast } from "react-toastify";
 
 const EventDetails = () => {
-	const { id } = useParams();
+	const { id } = useParams(); // Event ID from the URL
 	const [event, setEvent] = useState(null);
+	const [tickets, setTickets] = useState([]); // State to hold the user's tickets
 	const [selectedSeats, setSelectedSeats] = useState([]);
+	const [isPurchasing, setIsPurchasing] = useState(false); // Track the purchase state
+	const [purchaseError, setPurchaseError] = useState(null); // Track any errors
 
 	useEffect(() => {
-		const fetchEvent = async () => {
+		const fetchEventAndTickets = async () => {
 			try {
-				const { data } = await API.get(`/events/${id}`);
-				setEvent(data);
+				// Fetch event details
+				const { data: eventData } = await API.get(`/events/${id}`);
+				setEvent(eventData);
+
+				// Fetch user's tickets for this event
+				const ticketData = localStorage.getItem("tickets");
+				const allTickets = ticketData ? JSON.parse(ticketData) : [];
+
+				// Filter tickets for the current event
+				const userTickets = allTickets.filter(
+					(ticket) => ticket.event._id === id
+				);
+				setTickets(userTickets);
 			} catch (error) {
-				console.error("Error fetching event data:", error);
+				console.error("Error fetching event and tickets data:", error);
 			}
 		};
-		fetchEvent();
+		fetchEventAndTickets();
 	}, [id]);
 
 	const handleSeatClick = (seat) => {
@@ -29,6 +44,55 @@ const EventDetails = () => {
 		}
 	};
 
+	const handlePurchase = async () => {
+		setIsPurchasing(true);
+		setPurchaseError(null);
+
+		try {
+			const response = await API.post(`/tickets/purchase`, {
+				eventId: id,
+				selectedSeats,
+			});
+			console.log("Purchase successful:", response.data);
+
+			// Update localStorage with the new tickets
+			const existingTickets = JSON.parse(localStorage.getItem("tickets")) || [];
+			const updatedTickets = [...existingTickets, ...response.data];
+			localStorage.setItem("tickets", JSON.stringify(updatedTickets));
+
+			// Filter tickets for the current event
+			const userTickets = updatedTickets.filter(
+				(ticket) => ticket.event._id === id
+			);
+			setTickets(userTickets);
+
+			// Update the event state to disable the purchased seats
+			setEvent((prevEvent) => {
+				const updatedSeats = prevEvent.seats.map((seat) =>
+					selectedSeats.includes(seat.seatNumber)
+						? { ...seat, isAvailable: false }
+						: seat
+				);
+
+				return {
+					...prevEvent,
+					seats: updatedSeats,
+					ticketsAvailable: prevEvent.ticketsAvailable - selectedSeats.length,
+				};
+			});
+
+			toast.success("Purchase successful!");
+			// Clear selected seats after successful purchase
+			setSelectedSeats([]);
+		} catch (error) {
+			console.error("Error purchasing tickets:", error);
+			setPurchaseError("Failed to complete the purchase. Please try again.");
+			toast.error("Failed to complete the purchase. Please try again.");
+		} finally {
+			setIsPurchasing(false);
+		}
+	};
+
 	const getSeatColor = (seat) => {
 		if (!seat.isAvailable) return "bg-gray-400"; // Reserved
 		return selectedSeats.includes(seat.seatNumber)
@@ -37,9 +101,9 @@ const EventDetails = () => {
 	};
 
 	return (
-		<div className="container mx-auto p-6">
+		<div className="mx-auto py-6 px-6">
 			{event && (
-				<div className="bg-white p-6 rounded-lg shadow-md text-black">
+				<div className="p-2 text-white">
 					<h1 className="text-3xl font-bold mb-4">{event.name}</h1>
 					<p className="text-lg mb-2">
 						Date: {new Date(event.date).toLocaleDateString()}
@@ -48,21 +112,58 @@ const EventDetails = () => {
 					<p className="text-lg mb-2">
 						Tickets Available: {event.ticketsAvailable}
 					</p>
-					<div className="mt-6 grid grid-cols-10 gap-2">
-						{event?.seats?.map((seat) => (
-							<div
-								key={seat.seatNumber}
-								className={`w-12 h-12 flex items-center justify-center rounded cursor-pointer ${getSeatColor(
-									seat
-								)}`}
-								onClick={() => handleSeatClick(seat)}
-							>
-								{seat.seatNumber}
-							</div>
-						))}
+
+					{/* Display Purchased Tickets */}
+					<h2 className="text-2xl font-bold mt-6">Your Tickets</h2>
+					<div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+						{tickets.length > 0 ? (
+							tickets.map((ticket) => (
+								<div
+									key={ticket._id}
+									className="p-4 border border-gray-200 rounded-lg"
+								>
+									<p>Seat: {ticket.seatNumber}</p>
+									<p>Ticket Code: {ticket.code}</p>
+									<p>
+										Purchased on:{" "}
+										{new Date(ticket.createdAt).toLocaleDateString()}
+									</p>
+								</div>
+							))
+						) : (
+							<p>You have not purchased any tickets yet.</p>
+						)}
 					</div>
-					<button className="mt-4 bg-blue-600 text-white py-2 px-4 rounded">
-						Purchase Ticket
+
+					{/* Display Seat Selection */}
+					<div className="w-full overflow-x-scroll overflow-y-hidden mt-6">
+						<div className="custom-grid overflow-x-scroll mx-auto">
+							{event?.seats?.map((seat) => (
+								<div
+									key={seat.seatNumber}
+									className={`text-[12px] h-[3rem] w-[3rem] p-1 flex items-center justify-center rounded cursor-pointer ${getSeatColor(
+										seat
+									)}`}
+									onClick={() => handleSeatClick(seat)}
+								>
+									{seat.seatNumber}
+								</div>
+							))}
+						</div>
+					</div>
+					{purchaseError && (
+						<p className="text-red-500 mt-4">{purchaseError}</p>
+					)}
+					<button
+						className={`mt-4 bg-blue-600 text-white py-2 px-4 rounded ${
+							isPurchasing || selectedSeats.length === 0
+								? "opacity-50 cursor-not-allowed"
+								: ""
+						}`}
+						onClick={handlePurchase}
+						disabled={isPurchasing || selectedSeats.length === 0}
+					>
+						{isPurchasing ? "Purchasing..." : "Purchase Ticket"}
 					</button>
 				</div>
 			)}

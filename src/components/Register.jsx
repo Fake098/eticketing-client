@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../api/api";
+import { toast } from "react-toastify";
 
 const Register = () => {
 	const [formData, setFormData] = useState({
@@ -8,6 +10,30 @@ const Register = () => {
 		password: "",
 	});
 	const [error, setError] = useState(null);
+	const [countdown, setCountdown] = useState(0);
+	const [toastId, setToastId] = useState(null); // To store toast ID for updating
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		let timer;
+		if (countdown > 0) {
+			timer = setInterval(() => {
+				setCountdown((prevCountdown) => {
+					const newCountdown = prevCountdown - 1;
+					if (toastId) {
+						toast.update(toastId, {
+							render: `Registration successful! Redirecting to login in ${newCountdown} seconds...`,
+						});
+					}
+					return newCountdown;
+				});
+			}, 1000);
+		} else if (countdown === 0 && toastId) {
+			clearInterval(timer);
+			navigate("/login");
+		}
+		return () => clearInterval(timer);
+	}, [countdown, navigate, toastId]);
 
 	const handleChange = (e) => {
 		setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -17,15 +43,22 @@ const Register = () => {
 		e.preventDefault();
 		try {
 			const { data } = await API.post("/auth/register", formData);
-			localStorage.setItem("authToken", data.token);
-			// Redirect or perform further actions
+			if (data.success) {
+				const id = toast.success(
+					`Registration successful! Redirecting to login in ${countdown} seconds...`
+				);
+				setToastId(id); // Store the toast ID for updating
+				setCountdown(5); // Start countdown
+			} else {
+				setError(data.message);
+			}
 		} catch (err) {
 			setError(err.response.data.message);
 		}
 	};
 
 	return (
-		<div className="container mx-auto p-6">
+		<div className="  mx-auto p-6">
 			<h2 className="text-3xl font-bold mb-6">Register</h2>
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<input
