@@ -1,7 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Cookies from "js-cookie";
 import API from "../api/api";
 import { toast } from "react-toastify";
+import {
+	saveTicketsToLocalStorage,
+	saveUserDataToSessionStorage,
+} from "../utils/storageFunctions";
 
 const Login = () => {
 	const [formData, setFormData] = useState({ email: "", password: "" });
@@ -20,17 +24,14 @@ const Login = () => {
 				Cookies.set("authToken", data.token, { expires: 7 }); // Expires in 7 days
 
 				// Save user data in sessionStorage
-				sessionStorage.setItem(
-					"user",
-					JSON.stringify({
-						_id: data._id,
-						name: data.name,
-						email: data.email,
-					})
-				);
+				saveUserDataToSessionStorage({
+					_id: data._id,
+					name: data.name,
+					email: data.email,
+				});
 
 				// Save tickets in localStorage
-				localStorage.setItem("tickets", JSON.stringify(data.tickets));
+				saveTicketsToLocalStorage(data.tickets);
 
 				// Show success toast
 				toast.success("Login successful! Redirecting to your profile...");

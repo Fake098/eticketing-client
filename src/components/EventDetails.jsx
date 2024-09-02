@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../api/api";
+import Cookies from "js-cookie";
 import { toast } from "react-toastify";
+import {
+	getTicketsFromLocalStorage,
+	saveTicketsToLocalStorage,
+} from "../utils/storageFunctions";
 
 const EventDetails = () => {
 	const { id } = useParams(); // Event ID from the URL
@@ -10,7 +15,7 @@ const EventDetails = () => {
 	const [selectedSeats, setSelectedSeats] = useState([]);
 	const [isPurchasing, setIsPurchasing] = useState(false); // Track the purchase state
 	const [purchaseError, setPurchaseError] = useState(null); // Track any errors
-
+	const isAuthenticated = !!Cookies.get("authToken");
 	useEffect(() => {
 		const fetchEventAndTickets = async () => {
 			try {
@@ -18,15 +23,16 @@ const EventDetails = () => {
 				const { data: eventData } = await API.get(`/events/${id}`);
 				setEvent(eventData);
 
-				// Fetch user's tickets for this event
-				const ticketData = localStorage.getItem("tickets");
-				const allTickets = ticketData ? JSON.parse(ticketData) : [];
-
-				// Filter tickets for the current event
-				const userTickets = allTickets.filter(
-					(ticket) => ticket.event._id === id
-				);
-				setTickets(userTickets);
+				if (isAuthenticated) {
+					// Fetch user's tickets for this event
+					const ticketData = getTicketsFromLocalStorage();
+					const parsedTicket = JSON.parse(ticketData);
+					// Filter tickets for the current event
+					const userTickets = parsedTicket.filter(
+						(ticket) => ticket.event._id === id
+					);
+					setTickets(userTickets);
+				}
 			} catch (error) {
 				console.error("Error fetching event and tickets data:", error);
 			}
@@ -45,6 +51,11 @@ const EventDetails = () => {
 	};
 
 	const handlePurchase = async () => {
+		if (!isAuthenticated) {
+			toast.error("Please log in to continue.");
+			setSelectedSeats([]);
+			return;
+		}
 		setIsPurchasing(true);
 		setPurchaseError(null);
 
@@ -53,12 +64,12 @@ const EventDetails = () => {
 				eventId: id,
 				selectedSeats,
 			});
-			console.log("Purchase successful:", response.data);
 
 			// Update localStorage with the new tickets
-			const existingTickets = JSON.parse(localStorage.getItem("tickets")) || [];
-			const updatedTickets = [...existingTickets, ...response.data];
-			localStorage.setItem("tickets", JSON.stringify(updatedTickets));
+			const existingTickets = getTicketsFromLocalStorage();
+			const parsedTicket = JSON.parse(existingTickets);
+			const updatedTickets = [...parsedTicket, ...response.data];
+			saveTicketsToLocalStorage(updatedTickets);
 
 			// Filter tickets for the current event
 			const userTickets = updatedTickets.filter(

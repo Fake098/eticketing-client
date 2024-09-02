@@ -1,5 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Logout from "./Logout";
+import {
+	getTicketsFromLocalStorage,
+	getUserDataFromSessionStorage,
+} from "../utils/storageFunctions";
 
 const Profile = () => {
 	const [tickets, setTickets] = useState([]);
@@ -8,13 +12,12 @@ const Profile = () => {
 	useEffect(() => {
 		const fetchUserData = () => {
 			// Fetch tickets data from localStorage
-			const ticketData = localStorage.getItem("tickets");
+			const ticketData = getTicketsFromLocalStorage();
 			setTickets(ticketData ? JSON.parse(ticketData) : []);
 
-			const userData = sessionStorage.getItem("user");
+			const userData = getUserDataFromSessionStorage(); // Use the decryption function
 			if (userData) {
-				const parsedUser = JSON.parse(userData);
-				setUser({ name: parsedUser.name, email: parsedUser.email });
+				setUser({ name: userData.name, email: userData.email });
 			}
 		};
 

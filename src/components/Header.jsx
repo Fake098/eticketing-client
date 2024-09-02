@@ -1,10 +1,8 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import Cookies from "js-cookie";
 
 const Header = () => {
 	const isLoggedIn = !!Cookies.get("authToken"); // Check if the authToken exists in cookies
-
 	return (
 		<header className="bg-blue-600 w-full text-white py-4 px-6">
 			<div className="container mx-auto flex justify-between items-center">
