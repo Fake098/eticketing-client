@@ -7,7 +7,7 @@ const EventList = () => {
 
 	useEffect(() => {
 		const fetchEvents = async () => {
-			const { data } = await API.get("/events");
+			const { data } = await API.get("/v1/event");
 			setEvents(data);
 		};
 		fetchEvents();
@@ -17,7 +17,7 @@ const EventList = () => {
 		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
 			{events.map((event) => (
 				<div
-					key={event._id}
+					key={event.id}
 					className="bg-[#383838] text-center p-4 rounded-lg shadow-md text-white"
 				>
 					<h3 className="text-xl font-semibold">{event.name}</h3>
@@ -26,7 +26,7 @@ const EventList = () => {
 					</p>
 					<p className="text-white">Venue: {event.venue}</p>
 					<Link
-						to={`/events/${event._id}`}
+						to={`/events/${event.id}`}
 						className="text-blue-600 hover:underline mt-4 block"
 					>
 						View Details

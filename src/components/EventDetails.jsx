@@ -12,25 +12,28 @@ const EventDetails = () => {
 	const { id } = useParams(); // Event ID from the URL
 	const [event, setEvent] = useState(null);
 	const [tickets, setTickets] = useState([]); // State to hold the user's tickets
-	const [selectedSeats, setSelectedSeats] = useState([]);
+	const [seatCount, setSeatCount] = useState(0); // Number of seats to purchase
 	const [isPurchasing, setIsPurchasing] = useState(false); // Track the purchase state
 	const [purchaseError, setPurchaseError] = useState(null); // Track any errors
 	const isAuthenticated = !!Cookies.get("authToken");
+
 	useEffect(() => {
 		const fetchEventAndTickets = async () => {
 			try {
 				// Fetch event details
-				const { data: eventData } = await API.get(`/events/${id}`);
+				const { data: eventData } = await API.get(`/v1/event/${id}`);
 				setEvent(eventData);
 
 				if (isAuthenticated) {
 					// Fetch user's tickets for this event
 					const ticketData = getTicketsFromLocalStorage();
 					const parsedTicket = JSON.parse(ticketData);
+					console.log(parsedTicket);
 					// Filter tickets for the current event
 					const userTickets = parsedTicket.filter(
-						(ticket) => ticket.event._id === id
+						(ticket) => ticket?.event?.id == id || ticket?.eventId == id
 					);
+					console.log(userTickets);
 					setTickets(userTickets);
 				}
 			} catch (error) {
@@ -38,63 +41,56 @@ const EventDetails = () => {
 			}
 		};
 		fetchEventAndTickets();
-	}, [id]);
-
-	const handleSeatClick = (seat) => {
-		if (seat.isAvailable) {
-			setSelectedSeats((prevSelectedSeats) =>
-				prevSelectedSeats.includes(seat.seatNumber)
-					? prevSelectedSeats.filter((s) => s !== seat.seatNumber)
-					: [...prevSelectedSeats, seat.seatNumber]
-			);
-		}
-	};
+	}, [id, isAuthenticated]);
 
 	const handlePurchase = async () => {
 		if (!isAuthenticated) {
 			toast.error("Please log in to continue.");
-			setSelectedSeats([]);
+			setSeatCount(0);
 			return;
 		}
+
+		if (seatCount <= 0) {
+			toast.error("Please enter a valid number of seats.");
+			return;
+		}
+
+		if (seatCount > event.ticketsAvailable) {
+			toast.error("Not enough seats available.");
+			return;
+		}
+
 		setIsPurchasing(true);
 		setPurchaseError(null);
 
 		try {
-			const response = await API.post(`/tickets/purchase`, {
+			const response = await API.post(`/v1/ticket/buy`, {
 				eventId: id,
-				selectedSeats,
+				quantity: seatCount, // Send the number of seats requested
 			});
 
 			// Update localStorage with the new tickets
 			const existingTickets = getTicketsFromLocalStorage();
-			const parsedTicket = JSON.parse(existingTickets);
-			const updatedTickets = [...parsedTicket, ...response.data];
-			saveTicketsToLocalStorage(updatedTickets);
-
+			const parsedTicket = existingTickets ? JSON.parse(existingTickets) : [];
+			console.log(parsedTicket);
+			// Validate the result is an array, fallback to empty array if not
+			const ticketsArray = Array.isArray(parsedTicket) ? parsedTicket : [];
+			const updatedTickets = [...ticketsArray, ...response.data.tickets];
 			// Filter tickets for the current event
+			saveTicketsToLocalStorage(updatedTickets);
 			const userTickets = updatedTickets.filter(
-				(ticket) => ticket.event._id === id
+				(ticket) => ticket?.event?.id == id || ticket?.eventId == id
 			);
 			setTickets(userTickets);
 
-			// Update the event state to disable the purchased seats
-			setEvent((prevEvent) => {
-				const updatedSeats = prevEvent.seats.map((seat) =>
-					selectedSeats.includes(seat.seatNumber)
-						? { ...seat, isAvailable: false }
-						: seat
-				);
-
-				return {
-					...prevEvent,
-					seats: updatedSeats,
-					ticketsAvailable: prevEvent.ticketsAvailable - selectedSeats.length,
-				};
-			});
+			// Update the event state to reflect the reduced number of available tickets
+			setEvent((prevEvent) => ({
+				...prevEvent,
+				ticketsAvailable: prevEvent.ticketsAvailable - seatCount,
+			}));
 
 			toast.success("Purchase successful!");
-			// Clear selected seats after successful purchase
-			setSelectedSeats([]);
+			setSeatCount(0); // Clear the input after successful purchase
 		} catch (error) {
 			console.error("Error purchasing tickets:", error);
 			setPurchaseError("Failed to complete the purchase. Please try again.");
@@ -102,13 +98,6 @@ const EventDetails = () => {
 		} finally {
 			setIsPurchasing(false);
 		}
-	};
-
-	const getSeatColor = (seat) => {
-		if (!seat.isAvailable) return "bg-gray-400"; // Reserved
-		return selectedSeats.includes(seat.seatNumber)
-			? "bg-red-500"
-			: "bg-green-500"; // Selected or Available
 	};
 
 	return (
@@ -121,7 +110,7 @@ const EventDetails = () => {
 					</p>
 					<p className="text-lg mb-2">Venue: {event.venue}</p>
 					<p className="text-lg mb-2">
-						Tickets Available: {event.ticketsAvailable}
+						Tickets Available: {event.totalTickets - event.soldTicketCount}
 					</p>
 
 					{/* Display Purchased Tickets */}
@@ -130,7 +119,7 @@ const EventDetails = () => {
 						{tickets.length > 0 ? (
 							tickets.map((ticket) => (
 								<div
-									key={ticket._id}
+									key={ticket.id}
 									className="p-4 border border-gray-200 rounded-lg"
 								>
 									<p>Seat: {ticket.seatNumber}</p>
@@ -146,35 +135,35 @@ const EventDetails = () => {
 						)}
 					</div>
 
-					{/* Display Seat Selection */}
-					<div className="w-full overflow-x-scroll overflow-y-hidden mt-6">
-						<div className="custom-grid overflow-x-scroll mx-auto">
-							{event?.seats?.map((seat) => (
-								<div
-									key={seat.seatNumber}
-									className={`text-[12px] h-[3rem] w-[3rem] p-1 flex items-center justify-center rounded cursor-pointer ${getSeatColor(
-										seat
-									)}`}
-									onClick={() => handleSeatClick(seat)}
-								>
-									{seat.seatNumber}
-								</div>
-							))}
-						</div>
+					{/* Input Field for Number of Seats */}
+					<div className="mt-6">
+						<label className="block text-lg mb-2">
+							Enter the number of seats to purchase:
+						</label>
+						<input
+							type="number"
+							min="1"
+							max={event.ticketsAvailable}
+							value={seatCount}
+							onChange={(e) => setSeatCount(parseInt(e.target.value, 10))}
+							className="w-full px-3 py-2 border rounded"
+						/>
 					</div>
+
 					{purchaseError && (
 						<p className="text-red-500 mt-4">{purchaseError}</p>
 					)}
+
 					<button
 						className={`mt-4 bg-blue-600 text-white py-2 px-4 rounded ${
-							isPurchasing || selectedSeats.length === 0
+							isPurchasing || seatCount <= 0
 								? "opacity-50 cursor-not-allowed"
 								: ""
 						}`}
 						onClick={handlePurchase}
-						disabled={isPurchasing || selectedSeats.length === 0}
+						disabled={isPurchasing || seatCount <= 0}
 					>
-						{isPurchasing ? "Purchasing..." : "Purchase Ticket"}
+						{isPurchasing ? "Purchasing..." : "Purchase Tickets"}
 					</button>
 				</div>
 			)}

@@ -16,7 +16,7 @@ const AdminDashboard = () => {
 
 	useEffect(() => {
 		const fetchEvents = async () => {
-			const { data } = await API.get("/events");
+			const { data } = await API.get("/v1/events");
 			setEvents(data);
 		};
 		fetchEvents();
@@ -32,7 +32,7 @@ const AdminDashboard = () => {
 			if (isEditing) {
 				const { data } = await API.put(`/events/${editingEventId}`, formData);
 				setEvents(
-					events.map((event) => (event._id === editingEventId ? data : event))
+					events.map((event) => (event.id === editingEventId ? data : event))
 				);
 				setIsEditing(false);
 				setEditingEventId(null);
@@ -55,7 +55,7 @@ const AdminDashboard = () => {
 
 	const handleEdit = (event) => {
 		setFormData({
-			_id,
+			id: event.id,
 			name: event.name,
 			venue: event.venue,
 			date: event.date.split("T")[0],

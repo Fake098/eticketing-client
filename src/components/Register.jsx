@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/api";
 import { toast } from "react-toastify";
 
 const Register = () => {
 	const [formData, setFormData] = useState({
-		name: "",
+		username: "",
 		email: "",
 		password: "",
 	});
@@ -42,7 +42,8 @@ const Register = () => {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		try {
-			const { data } = await API.post("/auth/register", formData);
+			const { data } = await API.post("/v1/auth/register/user", formData);
+			console.log(data);
 			if (data.success) {
 				const id = toast.success(
 					`Registration successful! Redirecting to login in ${countdown} seconds...`
@@ -50,7 +51,7 @@ const Register = () => {
 				setToastId(id); // Store the toast ID for updating
 				setCountdown(5); // Start countdown
 			} else {
-				setError(data.message);
+				setError(data.error);
 			}
 		} catch (err) {
 			setError(err.response.data.message);
@@ -63,7 +64,7 @@ const Register = () => {
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<input
 					type="text"
-					name="name"
+					name="username"
 					value={formData.name}
 					onChange={handleChange}
 					placeholder="Name"

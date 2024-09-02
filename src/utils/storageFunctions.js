@@ -4,7 +4,7 @@ import { xorEncryptDecrypt } from "./xorEncryption";
 export const saveTicketsToLocalStorage = (tickets) => {
 	const encryptedTickets = xorEncryptDecrypt(
 		JSON.stringify(tickets),
-		import.meta.env.VITE_XOR_KEY // Accessing the updated variable name
+		import.meta.env.VITE_XOR_KEY
 	);
 	localStorage.setItem("tickets", encryptedTickets);
 };
@@ -15,7 +15,7 @@ export const getTicketsFromLocalStorage = () => {
 	if (!encryptedTickets) return [];
 	const decryptedTickets = xorEncryptDecrypt(
 		encryptedTickets,
-		import.meta.env.VITE_XOR_KEY // Accessing the updated variable name
+		import.meta.env.VITE_XOR_KEY
 	);
 	return decryptedTickets;
 };
@@ -23,7 +23,7 @@ export const getTicketsFromLocalStorage = () => {
 export const saveUserDataToSessionStorage = (user) => {
 	const encryptedUser = xorEncryptDecrypt(
 		JSON.stringify(user),
-		import.meta.env.VITE_XOR_KEY // Accessing the updated variable name
+		import.meta.env.VITE_XOR_KEY
 	);
 	sessionStorage.setItem("user", encryptedUser);
 };

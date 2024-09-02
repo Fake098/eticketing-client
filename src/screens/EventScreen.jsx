@@ -1,4 +1,3 @@
-import React from "react";
 import EventDetails from "../components/EventDetails";
 
 const EventScreen = () => {

@@ -28,7 +28,9 @@ const Profile = () => {
 	const groupedTickets =
 		tickets && tickets.length > 0
 			? tickets.reduce((acc, ticket) => {
-					const eventName = ticket.event.name; // Assuming ticket.event contains event details
+					const eventName = ticket?.event?.name || "Concert 2";
+
+					// Assuming ticket.event contains event details
 					if (!acc[eventName]) {
 						acc[eventName] = [];
 					}
@@ -36,7 +38,6 @@ const Profile = () => {
 					return acc;
 			  }, {})
 			: {};
-
 	return (
 		<div className="mx-auto p-6">
 			{user && (
@@ -50,7 +51,7 @@ const Profile = () => {
 						<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 							{groupedTickets[eventName].map((ticket) => (
 								<div
-									key={ticket._id}
+									key={ticket.id}
 									className="p-4 border border-gray-200 rounded-lg"
 								>
 									<p>Seat: {ticket.seatNumber}</p>

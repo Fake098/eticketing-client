@@ -18,20 +18,24 @@ const Login = () => {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		try {
-			const { data } = await API.post("/auth/login", formData);
+			const { data } = await API.post("/v1/auth/login", formData);
 			if (data) {
 				// Save token to cookies
 				Cookies.set("authToken", data.token, { expires: 7 }); // Expires in 7 days
 
 				// Save user data in sessionStorage
 				saveUserDataToSessionStorage({
-					_id: data._id,
-					name: data.name,
-					email: data.email,
+					id: data.data.id,
+					name: data.data.username,
+					email: data.data.email,
 				});
-
+				const ticketData = await API.get("v1/ticket/my/booking", {
+					userID: data.data.id,
+				});
 				// Save tickets in localStorage
-				saveTicketsToLocalStorage(data.tickets);
+				if (ticketData.data.length > 0 && !ticketData.message) {
+					saveTicketsToLocalStorage(ticketData.data);
+				}
 
 				// Show success toast
 				toast.success("Login successful! Redirecting to your profile...");
